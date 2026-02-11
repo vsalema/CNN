@@ -1,39 +1,132 @@
-<html>
- <head>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HLS Overlay Player</title>
 
- <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    height: 100%;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .player-wrapper {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+
+  .video-container {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+  }
+
+  video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+</style>
 </head>
+
 <body>
 
+<div class="player-wrapper">
+  <div class="video-container">
+    <button class="close-btn" onclick="closePlayer()">✕</button>
 
-<video width="100%" height="333" poster="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/CNN_Portugal.svg/300px-CNN_Portugal.svg.png" id="video" controls></video>
+    <!-- ✅ autoplay + muted au niveau HTML -->
+    <video
+      id="video"
+      controls
+      playsinline
+      autoplay
+      muted
+      poster="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/CNN_Portugal.svg/300px-CNN_Portugal.svg.png"
+    ></video>
+  </div>
+</div>
+
 <script>
-        if(Hls.isSupported()) {
-          var video = document.getElementById('video');
-          var hls = new Hls({
-              debug: true,
-			  enableWorker: true,
-			  lowLatencyMode: true,
-			  backBufferLength: 90
-          });
-          hls.loadSource('https://video-auth6.iol.pt/live_cnn/live_cnn/playlist.m3u8?wmsAuthSign=c2VydmVyX3RpbWU9Mi8xMS8yMDI2IDY6MTY6MjMgQU0maGFzaF92YWx1ZT1qUHV2N2xiRUpMbWk1YVpuUUN2T2d3PT0mdmFsaWRtaW51dGVzPTE0NDAmaWQ9MmYwMzJjYjUtYzA4ZC00NThhLWEyNDItNjZhMGFlMjE4NDA0');
-          hls.attachMedia(video);
-          hls.on(Hls.Events.MEDIA_ATTACHED, function() {
-            video.muted = false;
-            video.play();
-        });
-       }
-       // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
-       // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element throught the `src` property.
-       // This is using the built-in support of the plain video element, without using hls.js.
-        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = 'https://video-auth6.iol.pt/live_cnn/live_cnn/playlist.m3u8?wmsAuthSign=c2VydmVyX3RpbWU9Mi8xMS8yMDI2IDY6MTY6MjMgQU0maGFzaF92YWx1ZT1qUHV2N2xiRUpMbWk1YVpuUUN2T2d3PT0mdmFsaWRtaW51dGVzPTE0NDAmaWQ9MmYwMzJjYjUtYzA4ZC00NThhLWEyNDItNjZhMGFlMjE4NDA0';
-          video.addEventListener('canplay',function() {
-            video.play();
-          });
-        }
-      </script>
-            
-          
+  const video = document.getElementById('video');
+  const streamUrl = "https://video-auth6.iol.pt/live_cnn/live_cnn/playlist.m3u8?wmsAuthSign=c2VydmVyX3RpbWU9Mi8xMS8yMDI2IDY6MTY6MjMgQU0maGFzaF92YWx1ZT1qUHV2N2xiRUpMbWk1YVpuUUN2T2d3PT0mdmFsaWRtaW51dGVzPTE0NDAmaWQ9MmYwMzJjYjUtYzA4ZC00NThhLWEyNDItNjZhMGFlMjE4NDA0";
+
+  // ✅ Forçage JS (certaines plateformes ignorent l'attribut)
+  video.muted = true;
+  video.autoplay = true;
+  video.playsInline = true;
+
+  function tryPlay() {
+    const p = video.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  }
+
+  function initPlayer() {
+    if (window.Hls && Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 90
+      });
+
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        // ✅ autoplay
+        tryPlay();
+      });
+
+      // ✅ si blocage, relance au premier geste utilisateur
+      document.addEventListener("click", tryPlay, { once: true });
+
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+
+      video.addEventListener('loadedmetadata', () => {
+        // ✅ autoplay
+        tryPlay();
+      }, { once: true });
+
+      document.addEventListener("click", tryPlay, { once: true });
+    }
+  }
+
+  function closePlayer() {
+    window.parent.postMessage({ action: "closeOverlayPlayer" }, "*");
+  }
+
+  initPlayer();
+</script>
+
 </body>
 </html>
