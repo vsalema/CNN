@@ -1,86 +1,41 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>HLS Overlay Player</title>
-
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-
+<html>
+ <head>
+ <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
-
 <body>
 
 
-  <div class="video-container">
-    
 
-    <!-- ✅ autoplay + muted au niveau HTML -->
-    <video
-      id="video"
-      controls
-      width="100%" 
-      height="100%"
-      playsinline
-      autoplay
-      muted
-      poster="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/CNN_Portugal.svg/300px-CNN_Portugal.svg.png"
-    ></video>
-  </div>
-
-
+<video width="100%" height="100%" poster="" id="video" controls></video>
 <script>
-  const video = document.getElementById('video');
-  const streamUrl = "https://video-auth6.iol.pt/live_cnn/live_cnn/playlist.m3u8?wmsAuthSign=c2VydmVyX3RpbWU9Mi8xMS8yMDI2IDY6MTY6MjMgQU0maGFzaF92YWx1ZT1qUHV2N2xiRUpMbWk1YVpuUUN2T2d3PT0mdmFsaWRtaW51dGVzPTE0NDAmaWQ9MmYwMzJjYjUtYzA4ZC00NThhLWEyNDItNjZhMGFlMjE4NDA0";
-
-  // ✅ Forçage JS (certaines plateformes ignorent l'attribut)
-  video.muted = false;
-  video.autoplay = true;
-  video.playsInline = true;
-
-  function tryPlay() {
-    const p = video.play();
-    if (p && typeof p.catch === "function") p.catch(() => {});
-  }
-
-  function initPlayer() {
-    if (window.Hls && Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90
-      });
-
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        // ✅ autoplay
-        tryPlay();
-      });
-
-      // ✅ si blocage, relance au premier geste utilisateur
-      document.addEventListener("click", tryPlay, { once: true });
-
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = streamUrl;
-
-      video.addEventListener('loadedmetadata', () => {
-        // ✅ autoplay
-        tryPlay();
-      }, { once: true });
-
-      document.addEventListener("click", tryPlay, { once: true });
-    }
-  }
-
-  function closePlayer() {
-    window.parent.postMessage({ action: "closeOverlayPlayer" }, "*");
-  }
-
-  initPlayer();
-</script>
+        if(Hls.isSupported()) {
+          var video = document.getElementById('video');
+          var hls = new Hls({
+              debug: true,
+			  enableWorker: true,
+			  lowLatencyMode: true,
+			  backBufferLength: 90
+          });
+          hls.loadSource('https://raw.githubusercontent.com/LITUATUI/M3UPT/refs/heads/main/M3U/CNN_Portugal.m3u');
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MEDIA_ATTACHED, function() {
+            video.muted = false;
+            video.play();
+        });
+       }
+       // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
+       // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element throught the `src` property.
+       // This is using the built-in support of the plain video element, without using hls.js.
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = 'https://raw.githubusercontent.com/LITUATUI/M3UPT/refs/heads/main/M3U/CNN_Portugal.m3u';
+          video.addEventListener('canplay',function() {
+            video.play();
+          });
+        }
+      </script>
 
 </body>
 </html>
+
+
+
